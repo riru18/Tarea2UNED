@@ -7,16 +7,17 @@
 #include <limits>
 #include <vector>
 #include <random>
+#include <algorithm>
 
 using namespace std;
 
 //Clases
 
 struct Player {
-public:
     int id;
     string name;
     int wins;
+    char symbol;
 };
 
 class Board {
@@ -29,7 +30,7 @@ public:
 //Prototipo de funciones
 int menu ();
 void registerPlayer();
-void playGame();
+void playGame(Board& board, Player& player1, Player& player2);
 void playAgainstComputer();
 Player* findPlayerById(int id);
 void makeMove(Board &board, Player* player, char symbol);
@@ -129,7 +130,52 @@ Player* findPlayerById(int id) {
     return nullptr;
 }
 
-void playGame() {
+void playGame(Board& board, Player& player1, Player& player2) {
+    Player* currentPlayer = &player1;
+    Player* otherPlayer = &player2;
+
+    // Agrega contadores para el número de victorias
+    int winsPlayer1 = 0;
+    int winsPlayer2 = 0;
+
+    while (true) {
+        printBoard(board);
+        makeMove(board, *currentPlayer);
+
+        if (checkWinner(board, currentPlayer->symbol)) {
+            cout << "Jugador " << currentPlayer->symbol << " gana esta ronda!\n";
+            if (currentPlayer->symbol == 'C') {
+                winsPlayer1++;
+            } else if (currentPlayer->symbol == 'T') {
+                winsPlayer2++;
+            }
+        }
+
+        // Revisa si el tablero está lleno
+        bool boardFull = true;
+        for (const auto& row : board.grid) {
+            if (any_of(row.begin(), row.end(), [](char c) { return c == '-'; })) {
+                boardFull = false;
+                break;
+            }
+        }
+
+        if (boardFull) {
+            break;
+        }
+
+        // Intercambia jugadores
+        swap(currentPlayer, otherPlayer);
+    }
+
+    cout << "El juego ha terminado.\n";
+    cout << "Jugador C ha ganado " << winsPlayer1 << " veces.\n";
+    cout << "Jugador T ha ganado " << winsPlayer2 << " veces.\n";
+}
+
+
+
+/*void playGame() {
     // Solicitar las cédulas de los jugadores
     wcout << L"Ingrese la cédula del jugador 1: ";
     int id1;
@@ -184,36 +230,52 @@ void playGame() {
             break;
         }
     }
-}
+}*/
 
 void makeMove(Board &board, Player* player, char symbol) {
     // Imprimir el tablero
     printBoard(board);
 
-    // Solicitar la columna
-    cout << "Ingrese la columna: ";
-    int column;
-    cin >> column;
+    int row, column;
 
-    // Comprobar si la columna es válida
-    if (column < 0 || column >= board.grid[0].size()) {
-        wcout << L"Columna inválida." << endl;
-        return;
-    }
+    // Solicitar y validar la fila
+    while (true) {
+        cout << "Jugador " << player->name << ", ingrese la fila: ";
+        cin >> row;
+        row--;
 
-    // Comprobar si la columna está llena
-    if (board.grid[0][column] != '-') {
-        cout << "Columna llena." << endl;
-        return;
-    }
-
-    // Colocar la ficha en la columna
-    for (int row = board.grid.size() - 1; row >= 0; row--) {
-        if (board.grid[row][column] == '-') {
-            board.grid[row][column] = symbol;
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Valor inválido. Inténtelo de nuevo.\n";
+        } else if (row < 0 || row >= board.grid.size()) {
+            cout << "Fila fuera de rango. Inténtelo de nuevo.\n";
+        } else {
             break;
         }
     }
+
+    // Solicitar y validar la columna
+    while (true) {
+        cout << "Ingrese la columna: ";
+        cin >> column;
+        column--;
+
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Valor inválido. Inténtelo de nuevo.\n";
+        } else if (column < 0 || column >= board.grid[0].size()) {
+            cout << "Columna fuera de rango. Inténtelo de nuevo.\n";
+        } else if (board.grid[row][column] != '-') {
+            cout << "La posición ya está ocupada. Inténtelo de nuevo.\n";
+        } else {
+            break;
+        }
+    }
+
+    // Colocar la ficha en la posición
+    board.grid[row][column] = symbol;
 }
 
 void printBoard(Board &board) {
